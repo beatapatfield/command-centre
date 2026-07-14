@@ -56,6 +56,17 @@
     gap: 16px;
   }
   .brand { display: flex; align-items: center; gap: 14px; }
+  .back {
+    width: 40px; height: 40px; flex-shrink: 0;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    background: var(--card); border: 1px solid var(--line);
+    color: var(--turq-1); box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .back:hover { transform: translateX(-2px); box-shadow: var(--shadow-md); }
+  .back svg { width: 20px; height: 20px; }
   .logo {
     width: 46px; height: 46px;
     border-radius: 14px;
@@ -64,6 +75,7 @@
     place-items: center;
     box-shadow: var(--shadow-md);
     flex-shrink: 0;
+    text-decoration: none;
   }
   .logo svg { width: 24px; height: 24px; }
   .brand h1 {
@@ -114,12 +126,61 @@
     max-width: 1120px;
     margin: 0 auto;
     padding: 18px clamp(18px, 4vw, 40px) 30px;
+  }
+
+  /* view routing */
+  .view { display: none; animation: fade .25s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #view-home.active {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 22px;
     align-items: start;
+    padding-top: 12px;
   }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  @media (max-width: 800px) { #view-home.active { grid-template-columns: 1fr; } }
+  .view.feature .panel { max-width: 720px; margin: 0 auto; }
+
+  /* home tiles */
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 28px;
+    min-height: 200px;
+    border-radius: var(--radius);
+    background: var(--card);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: var(--shadow-lg);
+    text-decoration: none;
+    color: var(--ink);
+    position: relative;
+    overflow: hidden;
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  .tile::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grad); }
+  .tile:hover { transform: translateY(-4px); box-shadow: 0 28px 60px rgba(10,90,100,0.22); }
+  .tile-icon {
+    width: 58px; height: 58px; border-radius: 16px;
+    background: var(--grad); display: grid; place-items: center;
+    box-shadow: var(--shadow-md);
+  }
+  .tile-icon svg { width: 28px; height: 28px; }
+  .tile-text { margin-top: auto; }
+  .tile-text h3 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+  .tile-sub { margin: 4px 0 0; font-size: 14px; color: var(--muted); font-weight: 500; }
+  .tile-go {
+    position: absolute; right: 22px; bottom: 24px;
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(13,154,174,0.10); color: var(--turq-1);
+    transition: background .16s, transform .16s;
+  }
+  .tile-go svg { width: 18px; height: 18px; }
+  .tile:hover .tile-go { background: var(--grad); color: #05343a; transform: translateX(3px); }
 
   .panel {
     background: var(--card);
@@ -347,20 +408,36 @@
     color: var(--muted); font-size: 12.5px; padding: 8px 20px 34px;
   }
   #fileInput { display: none; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 26px;
+    transform: translate(-50%, 20px);
+    background: var(--ink); color: #eefcfb;
+    font-size: 14px; font-weight: 600;
+    padding: 12px 20px; border-radius: 999px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; z-index: 50;
+    transition: opacity .25s ease, transform .25s ease;
+    border-left: 4px solid var(--turq-2);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <div class="logo">
+    <a class="back" id="backBtn" href="#home" title="Back to home" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <a class="logo" href="#home" title="Home">
       <svg viewBox="0 0 24 24" fill="none" stroke="#05343a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
         <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"></path>
       </svg>
-    </div>
+    </a>
     <div>
       <h1>Command Centre</h1>
-      <p>Your day at a glance</p>
+      <p id="brandSub">Your day at a glance</p>
     </div>
   </div>
   <div class="toolbar">
@@ -377,7 +454,32 @@
 </header>
 
 <main>
+  <!-- Home -->
+  <section class="view home" id="view-home">
+    <a class="tile" href="#todo">
+      <span class="tile-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#05343a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"></rect><path d="M16 2v4M8 2v4M3 10h18"></path><path d="M9 16l2 2 4-4"></path></svg>
+      </span>
+      <div class="tile-text">
+        <h3>To-Do &amp; Schedule</h3>
+        <p class="tile-sub" id="homeTodoSub">Nothing scheduled</p>
+      </div>
+      <span class="tile-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
+    </a>
+    <a class="tile" href="#shop">
+      <span class="tile-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#05343a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2 3h3l2.6 13.4a2 2 0 0 0 2 1.6h8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>
+      </span>
+      <div class="tile-text">
+        <h3>Shopping List</h3>
+        <p class="tile-sub" id="homeShopSub">Nothing selected</p>
+      </div>
+      <span class="tile-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
+    </a>
+  </section>
+
   <!-- ToDo / Schedule -->
+  <div class="view feature" id="view-todo">
   <section class="panel" id="todoPanel">
     <div class="panel-head">
       <span class="panel-icon">
@@ -402,8 +504,10 @@
     <ul id="todoList"></ul>
     <button class="clear-done" id="clearDoneTodo" hidden>Clear completed</button>
   </section>
+  </div>
 
   <!-- Shopping List -->
+  <div class="view feature" id="view-shop">
   <section class="panel" id="shopPanel">
     <div class="panel-head">
       <span class="panel-icon">
@@ -428,6 +532,7 @@
     <ul id="shopList"></ul>
     <button class="clear-done" id="clearShop" hidden>Clear selection</button>
   </section>
+  </div>
 </main>
 
 <footer>Saved automatically in this browser · Export regularly to keep a backup</footer>
@@ -437,37 +542,52 @@
   "use strict";
 
   const KEY = "commandCentre.v3";
+  const INBOX_KEY = "commandCentre.inbox";
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const $ = id => document.getElementById(id);
 
   const CATEGORIES = ["Fruit & Veg", "Bakery", "Meat & Fish", "Dairy & Cheese", "Pantry", "Drinks", "Other"];
 
+  const SEED_VERSION = 2;
   const SEED = [
     ["Tomatoes - firm", "Fruit & Veg"],
     ["Cucumber", "Fruit & Veg"],
     ["Bell peppers", "Fruit & Veg"],
     ["Lemons", "Fruit & Veg"],
     ["Potatoes", "Fruit & Veg"],
+    ["Sweet potatoes", "Fruit & Veg"],
+    ["Red cabbage", "Fruit & Veg"],
+    ["Red onions", "Fruit & Veg"],
+    ["White onions", "Fruit & Veg"],
+    ["Green onions", "Fruit & Veg"],
+    ["Greens in a bag (mixed)", "Fruit & Veg"],
+    ["Roszponka", "Fruit & Veg"],
     ["Blueberries", "Fruit & Veg"],
     ["Raspberries", "Fruit & Veg"],
     ["Strawberries", "Fruit & Veg"],
     ["Watermelon", "Fruit & Veg"],
     ["Chleb górski", "Bakery"],
+    ["Chleb razowy ze słonecznikiem", "Bakery"],
     ["Tortillas", "Bakery"],
+    ["Puff pastry", "Bakery"],
     ["Chicken breast fillet", "Meat & Fish"],
     ["Minced beef", "Meat & Fish"],
     ["Cottage Cheese light", "Dairy & Cheese"],
     ["Feta-like cheese (lower-fat)", "Dairy & Cheese"],
     ["Piórko", "Dairy & Cheese"],
-    ["Twang półtłusty", "Dairy & Cheese"],
+    ["Twaróg półtłusty", "Dairy & Cheese"],
     ["Skyr", "Dairy & Cheese"],
+    ["Łaciaty serek kremowy lekki Protein +", "Dairy & Cheese"],
     ["Eggs: free range", "Dairy & Cheese"],
     ["Eggs: L", "Dairy & Cheese"],
     ["Milk 3%", "Dairy & Cheese"],
     ["Milk 2%", "Dairy & Cheese"],
     ["Milk fresh", "Dairy & Cheese"],
+    ["Śmietanka 30% 500ml", "Dairy & Cheese"],
+    ["Mascarpone 500ml", "Dairy & Cheese"],
     ["Liliput cheese", "Dairy & Cheese"],
     ["Parmesan-like hard cheese", "Dairy & Cheese"],
+    ["Halloumi", "Dairy & Cheese"],
     ["Mozarella block", "Dairy & Cheese"],
     ["Mozarella ball", "Dairy & Cheese"],
     ["Mozarella little balls", "Dairy & Cheese"],
@@ -475,6 +595,8 @@
     ["Pasta", "Pantry"],
     ["Rice", "Pantry"],
     ["Passata", "Pantry"],
+    ["Pineapple (cans)", "Pantry"],
+    ["Corn (cans)", "Pantry"],
     ["Coke 0 - 1l", "Drinks"]
   ].map(([name, category]) => ({ id: uid(), name, category, needed: false, brand: "" }));
 
@@ -488,6 +610,8 @@
   };
 
   let state = load();
+  migrateSeeds(state);
+  const ingested = ingestFromURL();
   save(); // persist current schema / migration
 
   function seedCopy() { return SEED.map(s => ({ ...s, id: uid() })); }
@@ -496,6 +620,62 @@
     SEED.forEach(seed => {
       if (!have.has(seed.name.trim().toLowerCase())) s.catalog.push({ ...seed, id: uid() });
     });
+  }
+  // Add newly-shipped default items once, and self-heal known typos.
+  function migrateSeeds(s) {
+    s.catalog.forEach(c => {
+      if (c.name.trim().toLowerCase() === "twang półtłusty") c.name = "Twaróg półtłusty";
+    });
+    if ((s.seedVersion || 0) < SEED_VERSION) { ensureSeeds(s); s.seedVersion = SEED_VERSION; }
+  }
+  // Tick matching catalog items "needed"; add unknown ones under "Other". Returns count.
+  function addItems(names) {
+    let n = 0;
+    names.map(x => String(x).trim()).filter(Boolean).forEach(name => {
+      const match = state.catalog.find(c => c.name.trim().toLowerCase() === name.toLowerCase());
+      if (match) match.needed = true;
+      else state.catalog.push({ id: uid(), name, category: "Other", needed: true, brand: "" });
+      n++;
+    });
+    return n;
+  }
+
+  // Handoff #1 — via a URL (works from any page):
+  //   command-centre/?add=Milk%203%25|Eggs:%20L|Basil
+  function ingestFromURL() {
+    const raw = new URLSearchParams(location.search).get("add");
+    if (!raw) return false;
+    const added = addItems(raw.split(/[|,\n]/));
+    // strip the query so a refresh doesn't re-add, and land on the shopping view
+    history.replaceState(null, "", location.pathname + "#shop");
+    return added > 0;
+  }
+
+  // Handoff #2 — via shared browser storage (same github.io account, no navigation):
+  //   the recipe page writes localStorage["commandCentre.inbox"] = JSON.stringify([...names])
+  function ingestInbox() {
+    let raw;
+    try { raw = localStorage.getItem(INBOX_KEY); } catch (e) { return; }
+    if (!raw) return;
+    try { localStorage.removeItem(INBOX_KEY); } catch (e) {}
+    let names = [];
+    try {
+      const d = JSON.parse(raw);
+      names = Array.isArray(d) ? d.map(x => (typeof x === "string" ? x : x && x.name)) : [];
+    } catch (e) { names = raw.split(/[|,\n]/); }
+    const added = addItems(names.filter(Boolean));
+    if (!added) return;
+    save(); renderShop();
+    toast(added + " item" + (added === 1 ? "" : "s") + " added from recipe");
+  }
+
+  function toast(msg) {
+    let t = $("toast");
+    if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._hide);
+    t._hide = setTimeout(() => t.classList.remove("show"), 2800);
   }
 
   function load() {
@@ -521,7 +701,7 @@
   }
 
   function normalize(p) {
-    const s = { todos: p.todos || [], catalog: p.catalog || [] };
+    const s = { todos: p.todos || [], catalog: p.catalog || [], seedVersion: p.seedVersion || 0 };
     if (!s.catalog.length && Array.isArray(p.shopping) && p.shopping.length) {
       s.catalog = seedCopy();
       p.shopping.forEach(x => s.catalog.push({ id: x.id || uid(), name: x.text, category: "Other", needed: !x.done, brand: "" }));
@@ -607,6 +787,7 @@
     $("todoProgress").style.width = pct + "%";
     $("todoProgressLabel").textContent = total ? (done + " of " + total + " tasks done · " + pct + "%") : "Nothing yet";
     $("clearDoneTodo").hidden = !state.todos.some(t => t.done);
+    updateHome();
   }
 
   // ---------- Shopping catalog ----------
@@ -703,6 +884,7 @@
     $("shopProgress").style.width = pct + "%";
     $("shopProgressLabel").textContent = need ? (need + " item" + (need === 1 ? "" : "s") + " to buy") : "Nothing selected";
     $("clearShop").hidden = !need;
+    updateHome();
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -771,8 +953,40 @@
     reader.readAsText(file);
   });
 
+  // ---------- home tiles + view routing ----------
+  const VIEWS = { home: "Your day at a glance", todo: "To-do & schedule", shop: "Shopping list" };
+  function updateHome() {
+    const open = state.todos.filter(t => !t.done).length;
+    const overdue = state.todos.filter(t => t.due && !t.done && new Date(t.due) < new Date()).length;
+    $("homeTodoSub").textContent = open
+      ? open + " task" + (open === 1 ? "" : "s") + " open" + (overdue ? " · " + overdue + " overdue" : "")
+      : "All clear";
+    const need = state.catalog.filter(c => c.needed).length;
+    $("homeShopSub").textContent = need ? need + " item" + (need === 1 ? "" : "s") + " to buy" : "Nothing selected";
+  }
+  function route() {
+    let h = (location.hash || "").replace("#", "");
+    if (!(h in VIEWS)) h = "home";
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    const el = $("view-" + h);
+    if (el) el.classList.add("active");
+    $("backBtn").hidden = (h === "home");
+    $("brandSub").textContent = VIEWS[h];
+    window.scrollTo({ top: 0 });
+    if (h === "todo") $("todoText").focus();
+    if (h === "shop") $("shopText").focus();
+  }
+  window.addEventListener("hashchange", route);
+
+  // Live inbox handoff: pick up items written by the recipe page while this is open,
+  // and re-check when the tab regains focus.
+  window.addEventListener("storage", e => { if (e.key === INBOX_KEY && e.newValue) ingestInbox(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) ingestInbox(); });
+
   renderTodos();
   renderShop();
+  route();
+  ingestInbox();
 })();
 </script>
 </body>

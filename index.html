@@ -266,6 +266,22 @@
   .clear-done:hover { color: var(--danger); }
 
   /* ---------- Shopping catalog ---------- */
+  li.section { margin: 16px 0 2px; }
+  li.section:first-child { margin-top: 10px; }
+  .section-head {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 9px 12px; border-radius: 12px;
+  }
+  .section-head svg { width: 15px; height: 15px; }
+  .section-head .sh-n {
+    margin-left: auto; font-size: 12px; font-weight: 700; letter-spacing: 0;
+    padding: 2px 9px; border-radius: 999px;
+  }
+  .section-head.ready { background: var(--grad-soft); color: var(--turq-1); }
+  .section-head.ready .sh-n { background: rgba(13,154,174,0.14); color: var(--turq-1); }
+  .section-head.rest { color: var(--muted); padding: 4px 12px; }
+  .section-head.rest .sh-n { background: rgba(90,129,137,0.12); color: var(--muted); }
   .cat-group { margin-top: 14px; }
   .cat-title {
     display: flex; align-items: center; gap: 8px;
@@ -420,68 +436,97 @@
 (function () {
   "use strict";
 
-  const KEY = "commandCentre.v2";
-  const OLD_KEY = "commandCentre.v1";
+  const KEY = "commandCentre.v3";
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const $ = id => document.getElementById(id);
 
-  const CATEGORIES = ["Fruit & Veg", "Bakery", "Dairy & Cheese", "Drinks", "Other"];
+  const CATEGORIES = ["Fruit & Veg", "Bakery", "Meat & Fish", "Dairy & Cheese", "Pantry", "Drinks", "Other"];
 
   const SEED = [
     ["Tomatoes - firm", "Fruit & Veg"],
+    ["Cucumber", "Fruit & Veg"],
+    ["Bell peppers", "Fruit & Veg"],
+    ["Lemons", "Fruit & Veg"],
+    ["Potatoes", "Fruit & Veg"],
     ["Blueberries", "Fruit & Veg"],
     ["Raspberries", "Fruit & Veg"],
+    ["Strawberries", "Fruit & Veg"],
     ["Watermelon", "Fruit & Veg"],
     ["Chleb górski", "Bakery"],
+    ["Tortillas", "Bakery"],
+    ["Chicken breast fillet", "Meat & Fish"],
+    ["Minced beef", "Meat & Fish"],
     ["Cottage Cheese light", "Dairy & Cheese"],
+    ["Feta-like cheese (lower-fat)", "Dairy & Cheese"],
     ["Piórko", "Dairy & Cheese"],
+    ["Twang półtłusty", "Dairy & Cheese"],
+    ["Skyr", "Dairy & Cheese"],
+    ["Eggs: free range", "Dairy & Cheese"],
+    ["Eggs: L", "Dairy & Cheese"],
     ["Milk 3%", "Dairy & Cheese"],
     ["Milk 2%", "Dairy & Cheese"],
     ["Milk fresh", "Dairy & Cheese"],
     ["Liliput cheese", "Dairy & Cheese"],
+    ["Parmesan-like hard cheese", "Dairy & Cheese"],
     ["Mozarella block", "Dairy & Cheese"],
     ["Mozarella ball", "Dairy & Cheese"],
-    ["Mozarella little balls", "Dairy & Cheese"]
+    ["Mozarella little balls", "Dairy & Cheese"],
+    ["Olive oil", "Pantry"],
+    ["Pasta", "Pantry"],
+    ["Rice", "Pantry"],
+    ["Passata", "Pantry"],
+    ["Coke 0 - 1l", "Drinks"]
   ].map(([name, category]) => ({ id: uid(), name, category, needed: false, brand: "" }));
-  SEED.push({ id: uid(), name: "Coke 0 - 1l", category: "Drinks", needed: false, brand: "" });
 
   const ICON = {
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>',
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>',
+    cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2 3h3l2.6 13.4a2 2 0 0 0 2 1.6h8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>',
+    list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>',
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>'
   };
 
   let state = load();
+  save(); // persist current schema / migration
+
+  function seedCopy() { return SEED.map(s => ({ ...s, id: uid() })); }
+  function ensureSeeds(s) {
+    const have = new Set(s.catalog.map(c => c.name.trim().toLowerCase()));
+    SEED.forEach(seed => {
+      if (!have.has(seed.name.trim().toLowerCase())) s.catalog.push({ ...seed, id: uid() });
+    });
+  }
 
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const p = JSON.parse(raw);
-        return normalize(p);
-      }
-      // migrate from v1 (free-text shopping list) if present
-      const old = localStorage.getItem(OLD_KEY);
-      if (old) {
-        const p = JSON.parse(old);
-        const catalog = SEED.slice();
-        (p.shopping || []).forEach(s => {
-          catalog.push({ id: s.id || uid(), name: s.text, category: "Other", needed: !s.done, brand: "" });
+      if (raw) return normalize(JSON.parse(raw)); // current schema, no seed injection
+      // migrate from v2 (catalog schema) and add any new default items
+      const v2 = localStorage.getItem("commandCentre.v2");
+      if (v2) { const s = normalize(JSON.parse(v2)); ensureSeeds(s); return s; }
+      // migrate from v1 (free-text shopping list)
+      const v1 = localStorage.getItem("commandCentre.v1");
+      if (v1) {
+        const p = JSON.parse(v1);
+        const catalog = seedCopy();
+        (p.shopping || []).forEach(x => {
+          if (catalog.some(c => c.name.trim().toLowerCase() === (x.text || "").trim().toLowerCase())) return;
+          catalog.push({ id: uid(), name: x.text, category: "Other", needed: !x.done, brand: "" });
         });
         return { todos: p.todos || [], catalog };
       }
     } catch (e) { console.warn("Load failed", e); }
-    return { todos: [], catalog: SEED.slice() };
+    return { todos: [], catalog: seedCopy() };
   }
 
   function normalize(p) {
     const s = { todos: p.todos || [], catalog: p.catalog || [] };
     if (!s.catalog.length && Array.isArray(p.shopping) && p.shopping.length) {
-      s.catalog = SEED.slice();
+      s.catalog = seedCopy();
       p.shopping.forEach(x => s.catalog.push({ id: x.id || uid(), name: x.text, category: "Other", needed: !x.done, brand: "" }));
     }
-    if (!s.catalog.length) s.catalog = SEED.slice();
+    if (!s.catalog.length) s.catalog = seedCopy();
     s.catalog.forEach(c => {
       if (!c.id) c.id = uid();
       if (!c.category) c.category = "Other";
@@ -578,8 +623,7 @@
     cb.addEventListener("change", e => {
       e.stopPropagation();
       item.needed = cb.checked;
-      li.classList.toggle("needed", cb.checked);
-      save(); updateShopMeta();
+      save(); renderShop(); // ticked items float to the ready list on top
     });
 
     const name = document.createElement("div");
@@ -611,6 +655,28 @@
     li.append(cb, name, detail);
     return li;
   }
+  function appendGroups(list, items) {
+    const groups = {};
+    items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
+    Object.keys(groups)
+      .sort((a, b) => catOrder(a) - catOrder(b) || a.localeCompare(b))
+      .forEach(cat => {
+        const its = groups[cat];
+        const head = document.createElement("li");
+        head.className = "cat-group";
+        head.innerHTML = '<div class="cat-title"><span>' + escapeHtml(cat) +
+          '</span><span class="bar"></span><span class="n">' + its.length + "</span></div>";
+        list.appendChild(head);
+        its.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(it => list.appendChild(makeCatItem(it)));
+      });
+  }
+  function sectionHead(cls, iconSvg, label, n) {
+    const li = document.createElement("li");
+    li.className = "section";
+    li.innerHTML = '<div class="section-head ' + cls + '">' + iconSvg +
+      "<span>" + label + "</span><span class=\"sh-n\">" + n + "</span></div>";
+    return li;
+  }
   function renderShop() {
     const list = $("shopList"); list.innerHTML = "";
     if (!state.catalog.length) {
@@ -619,21 +685,14 @@
       list.appendChild(li);
       updateShopMeta(); return;
     }
-    const groups = {};
-    state.catalog.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
-    Object.keys(groups)
-      .sort((a, b) => catOrder(a) - catOrder(b) || a.localeCompare(b))
-      .forEach(cat => {
-        const items = groups[cat];
-        const need = items.filter(i => i.needed).length;
-        const head = document.createElement("li");
-        head.className = "cat-group";
-        head.innerHTML = '<div class="cat-title"><span>' + escapeHtml(cat) +
-          '</span><span class="bar"></span><span class="n">' +
-          (need ? need + " / " + items.length : items.length) + "</span></div>";
-        list.appendChild(head);
-        items.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(it => list.appendChild(makeCatItem(it)));
-      });
+    const needed = state.catalog.filter(c => c.needed);
+    const rest = state.catalog.filter(c => !c.needed);
+    if (needed.length) {
+      list.appendChild(sectionHead("ready", ICON.cart, "Ready list", needed.length));
+      appendGroups(list, needed);
+      list.appendChild(sectionHead("rest", ICON.list, "Everything else", rest.length));
+    }
+    appendGroups(list, rest);
     updateShopMeta();
   }
   function updateShopMeta() {

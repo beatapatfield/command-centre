@@ -790,7 +790,7 @@
     toast(added + " item" + (added === 1 ? "" : "s") + " added from recipe");
   }
 
-  function toast(msg, action) {
+  function toast(msg, action, sticky) {
     let t = $("toast");
     if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
     t.innerHTML = "";
@@ -798,12 +798,12 @@
     if (action) {
       const btn = document.createElement("button");
       btn.className = "toast-action"; btn.type = "button"; btn.textContent = action.label;
-      btn.addEventListener("click", () => { action.fn(); t.classList.remove("show"); });
+      btn.addEventListener("click", () => { action.fn(); if (!action.keepOpen) t.classList.remove("show"); });
       t.appendChild(btn);
     }
     t.classList.add("show");
     clearTimeout(t._hide);
-    t._hide = setTimeout(() => t.classList.remove("show"), action ? 6000 : 2800);
+    if (!sticky) t._hide = setTimeout(() => t.classList.remove("show"), action ? 6000 : 2800);
   }
 
   function load() {
@@ -1186,8 +1186,29 @@
   });
   window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; });
 
+  function promptUpdate(worker) {
+    toast("Update available", { label: "Refresh", keepOpen: true, fn: () => worker.postMessage({ type: "SKIP_WAITING" }) }, true);
+  }
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloading) return; reloading = true; location.reload();
+    });
+    window.addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("sw.js");
+        // a new version was already downloaded on a previous visit
+        if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            // "installed" + an existing controller means this is an update, not first install
+            if (nw.state === "installed" && navigator.serviceWorker.controller) promptUpdate(nw);
+          });
+        });
+      } catch (e) {}
+    });
   }
 })();
 </script>

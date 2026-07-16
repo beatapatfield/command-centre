@@ -476,8 +476,6 @@
     max-width: 1120px; margin: 0 auto; text-align: center;
     color: var(--muted); font-size: 12.5px; padding: 8px 20px 34px;
   }
-  #fileInput { display: none; }
-
   #toast {
     position: fixed; left: 50%; bottom: 26px;
     transform: translate(-50%, 20px);
@@ -517,19 +515,10 @@
     </div>
   </div>
   <div class="toolbar">
-    <button class="btn primary" id="installBtn" title="Install app" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
-      Install
-    </button>
     <button class="btn" id="exportBtn" title="Download a backup">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
       Export
     </button>
-    <button class="btn" id="importBtn" title="Restore from a backup">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 9l5-5 5 5"></path><path d="M12 4v12"></path></svg>
-      Import
-    </button>
-    <input type="file" id="fileInput" accept="application/json,.json">
   </div>
 </header>
 
@@ -1303,7 +1292,7 @@
   $("shareShop").addEventListener("click", shareList);
   $("shopSearch").addEventListener("input", e => { shopFilter = e.target.value; renderShop(); });
 
-  // ---------- export / import ----------
+  // ---------- export (backup) ----------
   $("exportBtn").addEventListener("click", () => {
     const payload = { version: 2, exportedAt: new Date().toISOString(), ...state };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -1311,30 +1300,6 @@
     const a = document.createElement("a");
     a.href = url; a.download = "command-centre-" + new Date().toISOString().slice(0, 10) + ".json";
     a.click(); URL.revokeObjectURL(url);
-  });
-  $("importBtn").addEventListener("click", () => $("fileInput").click());
-  $("fileInput").addEventListener("change", e => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        const hasData = Array.isArray(data.todos) || Array.isArray(data.catalog) || Array.isArray(data.shopping);
-        if (!hasData) throw new Error("Unrecognised file");
-        const incoming = normalize(data);
-        const merge = confirm("OK = merge with current data.\nCancel = replace everything with the file.");
-        if (merge) {
-          const ids = new Set(state.todos.map(t => t.id).concat(state.catalog.map(c => c.id)));
-          incoming.todos.forEach(t => { if (!ids.has(t.id)) state.todos.push(t); });
-          incoming.catalog.forEach(c => { if (!ids.has(c.id)) state.catalog.push(c); });
-        } else {
-          state = incoming;
-        }
-        save(); renderTodos(); renderShop();
-      } catch (err) { alert("Could not import: " + err.message); }
-      e.target.value = "";
-    };
-    reader.readAsText(file);
   });
 
   // ---------- home tiles + view routing ----------
@@ -1372,42 +1337,10 @@
   route();
   ingestInbox();
 
-  // ---------- PWA: install prompt + service worker ----------
-  let deferredPrompt = null;
-  window.addEventListener("beforeinstallprompt", e => {
-    e.preventDefault(); deferredPrompt = e; $("installBtn").hidden = false;
-  });
-  $("installBtn").addEventListener("click", async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null; $("installBtn").hidden = true;
-  });
-  window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; });
-
-  function promptUpdate(worker) {
-    toast("Update available", { label: "Refresh", keepOpen: true, fn: () => worker.postMessage({ type: "SKIP_WAITING" }) }, true);
-  }
+  // ---------- PWA: service worker (silent updates) ----------
+  // The new version activates on its own and appears next time the app is opened — no prompt.
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    let reloading = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloading) return; reloading = true; location.reload();
-    });
-    window.addEventListener("load", async () => {
-      try {
-        const reg = await navigator.serviceWorker.register("sw.js");
-        // a new version was already downloaded on a previous visit
-        if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
-        reg.addEventListener("updatefound", () => {
-          const nw = reg.installing;
-          if (!nw) return;
-          nw.addEventListener("statechange", () => {
-            // "installed" + an existing controller means this is an update, not first install
-            if (nw.state === "installed" && navigator.serviceWorker.controller) promptUpdate(nw);
-          });
-        });
-      } catch (e) {}
-    });
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 })();
 </script>

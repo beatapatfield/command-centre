@@ -16,10 +16,11 @@ const SHELL = [
 ];
 
 self.addEventListener("install", e => {
-  // Force fresh copies (bypass HTTP cache); do NOT skipWaiting — wait for the user to tap Refresh.
+  // Force fresh copies (bypass HTTP cache), then activate immediately so the next
+  // time the app opens it silently serves the new version — no prompt needed.
   e.waitUntil(caches.open(CACHE).then(c =>
     Promise.all(SHELL.map(u => fetch(u, { cache: "reload" }).then(r => c.put(u, r)).catch(() => {})))
-  ));
+  ).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -28,11 +29,6 @@ self.addEventListener("activate", e => {
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
-});
-
-// The page asks us to activate the new version immediately when the user taps "Refresh".
-self.addEventListener("message", e => {
-  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("fetch", e => {

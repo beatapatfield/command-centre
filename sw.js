@@ -1,5 +1,9 @@
 /* Command Centre service worker — offline app shell + runtime caching */
-const CACHE = "command-centre-v1";
+/* CACHE version is stamped automatically at deploy time (see .github/workflows/deploy.yml).
+   The "__BUILD__" placeholder is replaced with a content hash of the app files, so a new
+   cache — and the in-app "Update available" prompt — only appears when the app actually changes.
+   If you deploy without the workflow, this stays constant (behaves like a fixed version). */
+const CACHE = "command-centre-__BUILD__";
 const SHELL = [
   "./",
   "./index.html",

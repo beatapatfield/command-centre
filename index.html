@@ -271,6 +271,8 @@
   .field.due { flex: 0 1 200px; }
   .field.cat { flex: 0 1 160px; }
   .field.qty { flex: 0 1 110px; }
+  .field.rep { flex: 0 1 140px; }
+  .field.search { flex: 1 1 100%; margin-top: 4px; }
   .field svg { width: 16px; height: 16px; color: var(--muted); flex-shrink: 0; }
   form.add .btn.primary { padding: 0 18px; }
 
@@ -312,8 +314,22 @@
   .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(13,154,174,0.10); color: var(--turq-1); }
   .pill.overdue { background: rgba(220,38,38,0.10); color: var(--danger); }
   .pill.soon { background: rgba(250,204,21,0.22); color: #8a6d00; }
+  .pill.repeat { background: rgba(13,154,174,0.10); color: var(--turq-1); }
   li.done { opacity: .6; }
   li.done .item-text { text-decoration: line-through; color: var(--muted); }
+  .todo-actions { display: flex; gap: 2px; flex-shrink: 0; }
+
+  /* inline to-do editor */
+  .todo-edit { display: none; flex-basis: 100%; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  li.item.editing .todo-edit { display: flex; }
+  li.item.editing .item-body, li.item.editing .todo-actions, li.item.editing > .check { display: none; }
+  .todo-edit input, .todo-edit select {
+    flex: 1 1 140px; min-width: 0; padding: 9px 11px; font-family: inherit; font-size: 14px;
+    color: var(--ink); background: var(--card-solid); border: 1px solid var(--line); border-radius: 10px; outline: none;
+  }
+  .todo-edit input:focus, .todo-edit select:focus { border-color: var(--turq-2); box-shadow: 0 0 0 3px rgba(47,208,216,0.18); }
+  .todo-edit .ed-btns { display: flex; gap: 8px; flex-basis: 100%; }
+  .todo-edit .btn { padding: 8px 14px; }
 
   .del {
     border: none; background: transparent; color: var(--muted);
@@ -401,6 +417,30 @@
     padding: 1px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
   }
   li.cat-item.needed .qty-tag { background: rgba(13,154,174,0.16); }
+  li.cat-item.bought { opacity: .5; }
+  li.cat-item.bought .nm { text-decoration: line-through; }
+  .step {
+    width: 32px; height: 36px; flex-shrink: 0;
+    border: 1px solid var(--line); background: var(--card-solid);
+    border-radius: 9px; font-size: 19px; font-weight: 700; line-height: 1;
+    color: var(--turq-1); cursor: pointer;
+  }
+  .step:hover { border-color: var(--turq-2); }
+
+  /* frequently-bought chips */
+  li.freq { margin: 4px 0 2px; }
+  .freq-wrap { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+  .freq-lab { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+  .chip {
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card-solid); color: var(--ink);
+    padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    transition: border-color .12s, background .12s;
+  }
+  .chip::before { content: "+ "; color: var(--turq-1); font-weight: 800; }
+  .chip:hover { border-color: var(--turq-2); background: var(--grad-soft); }
+
+  .shop-actions { display: flex; gap: 16px; margin-top: 10px; }
   .cat-item .name .chev {
     width: 15px; height: 15px; color: var(--muted); flex-shrink: 0;
     margin-left: auto;
@@ -539,6 +579,15 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
         <input type="datetime-local" id="todoDue">
       </label>
+      <label class="field rep" title="Repeat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        <select id="todoRepeat">
+          <option value="none">One-off</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </label>
       <button type="submit" class="btn primary">Add</button>
     </form>
     <ul id="todoList"></ul>
@@ -573,8 +622,15 @@
       </label>
       <button type="submit" class="btn primary">Add</button>
     </form>
+    <label class="field search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+      <input type="text" id="shopSearch" placeholder="Search items…" autocomplete="off">
+    </label>
     <ul id="shopList"></ul>
-    <button class="clear-done" id="clearShop" hidden>Clear selection</button>
+    <div class="shop-actions">
+      <button class="clear-done" id="shareShop" hidden>Share list</button>
+      <button class="clear-done" id="clearShop" hidden>Clear list</button>
+    </div>
   </section>
   </div>
 </main>
@@ -661,6 +717,7 @@
   const ICON = {
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>',
+    pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>',
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>',
     cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2 3h3l2.6 13.4a2 2 0 0 0 2 1.6h8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>',
     list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>',
@@ -736,6 +793,16 @@
     const key = String(name || "").trim().toLowerCase();
     return ALIASES[key] || name;
   }
+  // Adjust the first numeric term of a quantity by delta (drops it at 0, seeds "1" from empty).
+  function stepQty(str, delta) {
+    const terms = parseQty(str);
+    const idx = terms.findIndex(t => !t.raw && !isNaN(t.value));
+    if (idx === -1) return delta > 0 ? "1" : (str || "");
+    const v = terms[idx].value + delta;
+    if (v <= 0) terms.splice(idx, 1);
+    else terms[idx].value = v;
+    return terms.map(x => x.raw ? x.raw : fmtNum(x.value) + (x.unit ? " " + x.unit : "")).join(" + ");
+  }
 
   // Tick matching catalog items "needed" (summing quantity); add unknown ones under "Other".
   // Accepts strings ("Milk 2%") or objects ({ name, qty }). Returns count.
@@ -750,7 +817,7 @@
         match.needed = true;
         if (qty) match.qty = match.qty ? mergeQty(match.qty, qty) : qty;
       } else {
-        state.catalog.push({ id: uid(), name, category: "Other", needed: true, brand: "", qty, defaultQty: "" });
+        state.catalog.push({ id: uid(), name, category: "Other", needed: true, brand: "", qty, defaultQty: "", bought: false, timesBought: 0 });
       }
       n++;
     });
@@ -842,7 +909,10 @@
       if (typeof c.brand !== "string") c.brand = "";
       if (typeof c.qty !== "string") c.qty = "";
       if (typeof c.defaultQty !== "string") c.defaultQty = "";
+      if (typeof c.bought !== "boolean") c.bought = false;
+      if (typeof c.timesBought !== "number") c.timesBought = 0;
     });
+    (s.todos || []).forEach(t => { if (t.repeat == null) t.repeat = "none"; });
     return s;
   }
 
@@ -867,35 +937,94 @@
     if (diff < 24 * 3600 * 1000) return "soon";
     return "due";
   }
+  const REPEATS = { none: "One-off", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+  // Advance a due date by the repeat interval until it lands in the future.
+  function advance(iso, repeat) {
+    const d = iso ? new Date(iso) : new Date();
+    const now = new Date();
+    const bump = () => {
+      if (repeat === "daily") d.setDate(d.getDate() + 1);
+      else if (repeat === "weekly") d.setDate(d.getDate() + 7);
+      else if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+    };
+    do { bump(); } while (d <= now);
+    return d.toISOString();
+  }
   function makeTodo(item) {
     const li = document.createElement("li");
     li.className = "item" + (item.done ? " done" : "");
+    const recurring = item.repeat && item.repeat !== "none";
+
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.className = "check"; cb.checked = !!item.done;
-    cb.addEventListener("change", () => { item.done = cb.checked; save(); renderTodos(); });
+    cb.addEventListener("change", () => {
+      if (recurring && cb.checked) {
+        item.due = advance(item.due, item.repeat); item.done = false;
+        save(); renderTodos(); toast("Repeats — next on " + fmtDue(item.due));
+      } else { item.done = cb.checked; save(); renderTodos(); }
+    });
+
     const body = document.createElement("div"); body.className = "item-body";
     const text = document.createElement("div"); text.className = "item-text"; text.textContent = item.text;
     body.appendChild(text);
-    if (item.due) {
-      const ds = dueState(item);
+    if (item.due || recurring) {
       const meta = document.createElement("div"); meta.className = "item-meta";
-      meta.innerHTML = ICON.clock + " " + fmtDue(item.due);
+      meta.innerHTML = item.due ? ICON.clock + " " + fmtDue(item.due) : "";
+      const ds = dueState(item);
       if (ds && ds !== "due") {
-        const pill = document.createElement("span");
-        pill.className = "pill " + ds;
-        pill.textContent = ds === "overdue" ? "Overdue" : "Soon";
-        meta.appendChild(pill);
+        const pill = document.createElement("span"); pill.className = "pill " + ds;
+        pill.textContent = ds === "overdue" ? "Overdue" : "Soon"; meta.appendChild(pill);
+      }
+      if (recurring) {
+        const rp = document.createElement("span"); rp.className = "pill repeat";
+        rp.textContent = "↻ " + REPEATS[item.repeat]; meta.appendChild(rp);
       }
       body.appendChild(meta);
     }
+
+    const edit = document.createElement("button");
+    edit.className = "del"; edit.type = "button"; edit.title = "Edit"; edit.innerHTML = ICON.pencil;
+    edit.addEventListener("click", () => openEditor());
     const del = document.createElement("button");
     del.className = "del"; del.type = "button"; del.title = "Delete"; del.innerHTML = ICON.trash;
     del.addEventListener("click", () => {
       li.style.opacity = "0"; li.style.transform = "translateX(10px)";
       setTimeout(() => { state.todos = state.todos.filter(t => t.id !== item.id); save(); renderTodos(); }, 150);
     });
-    li.append(cb, body, del);
+    const actions = document.createElement("div"); actions.className = "todo-actions";
+    actions.append(edit, del);
+
+    // inline editor
+    const editor = document.createElement("div"); editor.className = "todo-edit";
+    editor.innerHTML =
+      '<input type="text" class="ed-text">' +
+      '<input type="datetime-local" class="ed-due">' +
+      '<select class="ed-rep">' + Object.keys(REPEATS).map(k => '<option value="' + k + '">' + REPEATS[k] + '</option>').join("") + '</select>' +
+      '<div class="ed-btns"><button type="button" class="btn primary ed-save">Save</button><button type="button" class="btn ed-cancel">Cancel</button></div>';
+    function openEditor() {
+      editor.querySelector(".ed-text").value = item.text;
+      editor.querySelector(".ed-due").value = item.due ? toLocalInput(item.due) : "";
+      editor.querySelector(".ed-rep").value = item.repeat || "none";
+      li.classList.add("editing");
+    }
+    editor.querySelector(".ed-cancel").addEventListener("click", () => li.classList.remove("editing"));
+    editor.querySelector(".ed-save").addEventListener("click", () => {
+      const t = editor.querySelector(".ed-text").value.trim(); if (!t) return;
+      item.text = t;
+      const dv = editor.querySelector(".ed-due").value;
+      item.due = dv || null;
+      item.repeat = editor.querySelector(".ed-rep").value;
+      save(); renderTodos();
+    });
+
+    li.append(cb, body, actions, editor);
     return li;
+  }
+  // ISO -> value for <input type="datetime-local"> in local time
+  function toLocalInput(iso) {
+    const d = new Date(iso); if (isNaN(d)) return "";
+    const p = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
   }
   function todoBucket(t) {
     if (t.done) return "done";
@@ -950,14 +1079,14 @@
   }
   function makeCatItem(item) {
     const li = document.createElement("li");
-    li.className = "cat-item" + (item.needed ? " needed" : "");
+    li.className = "cat-item" + (item.needed ? " needed" : "") + (item.needed && item.bought ? " bought" : "");
 
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.className = "check"; cb.checked = !!item.needed;
     cb.addEventListener("change", e => {
       e.stopPropagation();
       item.needed = cb.checked;
-      if (!cb.checked) item.qty = item.defaultQty || ""; // clear recipe quantities when ticked off
+      if (!cb.checked) { item.qty = item.defaultQty || ""; item.bought = false; } // reset when off the list
       save(); renderShop(); // ticked items float to the ready list on top
     });
 
@@ -965,20 +1094,33 @@
     name.className = "name";
     name.innerHTML = "<span class=\"nm\">" + escapeHtml(item.name) + "</span>" +
       (item.qty ? "<span class=\"qty-tag\">" + escapeHtml(item.qty) + "</span>" : "") + ICON.chev;
-    name.addEventListener("click", () => li.classList.toggle("open"));
+    // chevron always opens details; tapping the name marks a needed item bought, else opens details
+    name.querySelector(".chev").addEventListener("click", e => { e.stopPropagation(); li.classList.toggle("open"); });
+    name.addEventListener("click", () => {
+      if (item.needed) {
+        item.bought = !item.bought;
+        item.timesBought = Math.max(0, (item.timesBought || 0) + (item.bought ? 1 : -1));
+        save(); renderShop();
+      } else { li.classList.toggle("open"); }
+    });
+    if (item.needed) name.title = item.bought ? "Tap to un-mark" : "Tap to mark as bought";
 
     const detail = document.createElement("div");
     detail.className = "detail";
 
     const qrow = document.createElement("div"); qrow.className = "row";
     const qlab = document.createElement("label"); qlab.textContent = "Quantity";
+    const minus = document.createElement("button"); minus.type = "button"; minus.className = "step"; minus.textContent = "−";
+    const plus = document.createElement("button"); plus.type = "button"; plus.className = "step"; plus.textContent = "+";
     const qinp = document.createElement("input");
     qinp.className = "brand-input"; qinp.type = "text";
     qinp.placeholder = "e.g. 2 l, 500 g…";
     qinp.value = item.qty || "";
     qinp.addEventListener("input", () => { item.qty = qinp.value; save(); syncQtyTag(); });
     qinp.addEventListener("click", e => e.stopPropagation());
-    qrow.append(qlab, qinp);
+    minus.addEventListener("click", e => { e.stopPropagation(); item.qty = stepQty(item.qty, -1); qinp.value = item.qty; save(); syncQtyTag(); });
+    plus.addEventListener("click", e => { e.stopPropagation(); item.qty = stepQty(item.qty, 1); qinp.value = item.qty; save(); syncQtyTag(); });
+    qrow.append(qlab, minus, qinp, plus);
 
     const row = document.createElement("div"); row.className = "row";
     const lab = document.createElement("label"); lab.textContent = "Brand / notes";
@@ -1040,33 +1182,86 @@
       "<span>" + label + "</span><span class=\"sh-n\">" + n + "</span></div>";
     return li;
   }
+  let shopFilter = "";
   function renderShop() {
     const list = $("shopList"); list.innerHTML = "";
-    if (!state.catalog.length) {
-      const li = document.createElement("li");
-      li.innerHTML = '<div class="empty">' + ICON.empty + "<p>No items yet. Add your own above.</p></div>";
-      list.appendChild(li);
-      updateShopMeta(); return;
+    const filter = shopFilter.trim().toLowerCase();
+    const catalog = filter ? state.catalog.filter(c => c.name.toLowerCase().includes(filter)) : state.catalog;
+
+    // frequently-bought quick-add (hidden while searching)
+    if (!filter) {
+      const freq = state.catalog.filter(c => !c.needed && (c.timesBought || 0) > 0)
+        .sort((a, b) => b.timesBought - a.timesBought).slice(0, 6);
+      if (freq.length) {
+        const li = document.createElement("li"); li.className = "freq";
+        const wrap = document.createElement("div"); wrap.className = "freq-wrap";
+        const lab = document.createElement("span"); lab.className = "freq-lab"; lab.textContent = "Frequent";
+        wrap.appendChild(lab);
+        freq.forEach(it => {
+          const chip = document.createElement("button"); chip.type = "button"; chip.className = "chip";
+          chip.textContent = it.name;
+          chip.addEventListener("click", () => { it.needed = true; save(); renderShop(); });
+          wrap.appendChild(chip);
+        });
+        li.appendChild(wrap); list.appendChild(li);
+      }
     }
-    const needed = state.catalog.filter(c => c.needed);
-    const rest = state.catalog.filter(c => !c.needed);
+
+    if (!catalog.length) {
+      const li = document.createElement("li");
+      li.innerHTML = '<div class="empty">' + ICON.empty + "<p>" +
+        (filter ? "No items match “" + escapeHtml(shopFilter) + "”." : "No items yet. Add your own above.") +
+        "</p></div>";
+      list.appendChild(li); updateShopMeta(); return;
+    }
+    const needed = catalog.filter(c => c.needed);
+    const rest = catalog.filter(c => !c.needed);
     if (needed.length) {
       list.appendChild(sectionHead("ready", ICON.cart, "Ready list", needed.length));
       appendGroups(list, needed);
-      list.appendChild(sectionHead("rest", ICON.list, "Everything else", rest.length));
+      if (rest.length) list.appendChild(sectionHead("rest", ICON.list, "Everything else", rest.length));
     }
     appendGroups(list, rest);
     updateShopMeta();
   }
   function updateShopMeta() {
-    const total = state.catalog.length;
     const need = state.catalog.filter(c => c.needed).length;
+    const bought = state.catalog.filter(c => c.needed && c.bought).length;
     $("shopCount").textContent = need;
-    const pct = total ? Math.round(need / total * 100) : 0;
+    const pct = need ? Math.round(bought / need * 100) : 0;
     $("shopProgress").style.width = pct + "%";
-    $("shopProgressLabel").textContent = need ? (need + " item" + (need === 1 ? "" : "s") + " to buy") : "Nothing selected";
+    $("shopProgressLabel").textContent = need ? (bought + " of " + need + " in the trolley") : "Nothing selected";
     $("clearShop").hidden = !need;
+    $("shareShop").hidden = !need;
     updateHome();
+  }
+  function shopListText() {
+    const needed = state.catalog.filter(c => c.needed);
+    const groups = {};
+    needed.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
+    const lines = ["🛒 Shopping list", ""];
+    Object.keys(groups).sort((a, b) => catOrder(a) - catOrder(b) || a.localeCompare(b)).forEach(cat => {
+      lines.push(cat);
+      groups[cat].slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(it => {
+        lines.push("• " + it.name + (it.qty ? " — " + it.qty : "") + (it.bought ? " ✓" : ""));
+      });
+      lines.push("");
+    });
+    return lines.join("\n").trim();
+  }
+  function shareList() {
+    const text = shopListText();
+    if (!text) return;
+    if (navigator.share) { navigator.share({ title: "Shopping list", text }).catch(() => {}); return; }
+    const copy = navigator.clipboard && navigator.clipboard.writeText(text);
+    if (copy) copy.then(() => toast("List copied to clipboard")).catch(() => fallbackCopy(text));
+    else fallbackCopy(text);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement("textarea"); ta.value = text;
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("List copied to clipboard"); } catch (e) {}
+    ta.remove();
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1084,8 +1279,9 @@
     e.preventDefault();
     const text = $("todoText").value.trim(); if (!text) return;
     const due = $("todoDue").value || null;
-    state.todos.push({ id: uid(), text, due, done: false });
-    save(); renderTodos(); e.target.reset(); $("todoText").focus();
+    const repeat = $("todoRepeat").value || "none";
+    state.todos.push({ id: uid(), text, due, done: false, repeat });
+    save(); renderTodos(); e.target.reset(); $("todoRepeat").value = "none"; $("todoText").focus();
   });
   $("shopForm").addEventListener("submit", e => {
     e.preventDefault();
@@ -1094,15 +1290,18 @@
     const qty = $("shopQty").value.trim();
     const match = state.catalog.find(c => c.name.trim().toLowerCase() === resolveName(name).toLowerCase());
     if (match) { match.needed = true; if (qty) match.qty = match.qty ? mergeQty(match.qty, qty) : qty; }
-    else state.catalog.push({ id: uid(), name, category, needed: true, brand: "", qty, defaultQty: "" });
+    else state.catalog.push({ id: uid(), name, category, needed: true, brand: "", qty, defaultQty: "", bought: false, timesBought: 0 });
     save(); renderShop(); e.target.reset(); $("shopCat").value = "Other"; $("shopText").focus();
   });
   $("clearDoneTodo").addEventListener("click", () => {
     state.todos = state.todos.filter(t => !t.done); save(); renderTodos();
   });
   $("clearShop").addEventListener("click", () => {
-    state.catalog.forEach(c => { c.needed = false; c.qty = c.defaultQty || ""; }); save(); renderShop();
+    state.catalog.forEach(c => { c.needed = false; c.bought = false; c.qty = c.defaultQty || ""; });
+    save(); renderShop();
   });
+  $("shareShop").addEventListener("click", shareList);
+  $("shopSearch").addEventListener("input", e => { shopFilter = e.target.value; renderShop(); });
 
   // ---------- export / import ----------
   $("exportBtn").addEventListener("click", () => {

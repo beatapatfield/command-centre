@@ -427,6 +427,23 @@
   }
   .step:hover { border-color: var(--turq-2); }
 
+  /* add-from-search */
+  li.add-new { margin: 6px 0 2px; }
+  .add-new-btn {
+    width: 100%; text-align: left; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 600; color: var(--turq-1);
+    background: var(--grad-soft); border: 1px dashed rgba(13,154,174,0.55);
+    border-radius: 14px; padding: 13px 14px;
+    display: flex; align-items: center; gap: 10px;
+    transition: background .12s, border-color .12s;
+  }
+  .add-new-btn:hover { background: rgba(13,154,174,0.12); border-color: var(--turq-2); }
+  .add-new-btn .plus {
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 8px;
+    background: var(--grad); color: #05343a; font-weight: 800;
+    display: grid; place-items: center; font-size: 17px; line-height: 1;
+  }
+
   /* frequently-bought chips */
   li.freq { margin: 4px 0 2px; }
   .freq-wrap { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
@@ -597,24 +614,11 @@
     <div class="progress-label" id="shopProgressLabel">Nothing selected</div>
     <div class="progress"><i id="shopProgress"></i></div>
     <form class="add" id="shopForm">
-      <label class="field">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
-        <input type="text" id="shopText" placeholder="Add your own item…" autocomplete="off" required>
+      <label class="field search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+        <input type="text" id="shopSearch" placeholder="Search or add an item…" autocomplete="off">
       </label>
-      <label class="field qty" title="Quantity (optional)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"></path><path d="M8 3v18"></path></svg>
-        <input type="text" id="shopQty" placeholder="Qty" autocomplete="off">
-      </label>
-      <label class="field cat" title="Aisle / category">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
-        <select id="shopCat"></select>
-      </label>
-      <button type="submit" class="btn primary">Add</button>
     </form>
-    <label class="field search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
-      <input type="text" id="shopSearch" placeholder="Search items…" autocomplete="off">
-    </label>
     <ul id="shopList"></ul>
     <div class="shop-actions">
       <button class="clear-done" id="shareShop" hidden>Share list</button>
@@ -1172,10 +1176,30 @@
     return li;
   }
   let shopFilter = "";
+  function hasExact(name) {
+    const n = resolveName(String(name || "").trim()).toLowerCase();
+    return state.catalog.some(c => c.name.trim().toLowerCase() === n);
+  }
+  function addFromSearch() {
+    const raw = shopFilter.trim();
+    if (!raw) return;
+    addItems([{ name: raw }]);      // ticks a match (incl. aliases) or adds a new item, needed
+    shopFilter = ""; $("shopSearch").value = "";
+    save(); renderShop(); $("shopSearch").focus();
+  }
   function renderShop() {
     const list = $("shopList"); list.innerHTML = "";
     const filter = shopFilter.trim().toLowerCase();
     const catalog = filter ? state.catalog.filter(c => c.name.toLowerCase().includes(filter)) : state.catalog;
+
+    // offer to add the typed item when it isn't already in the catalog
+    if (filter && !hasExact(shopFilter)) {
+      const li = document.createElement("li"); li.className = "add-new";
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "add-new-btn";
+      btn.innerHTML = '<span class="plus">+</span> Add “' + escapeHtml(shopFilter.trim()) + '”';
+      btn.addEventListener("click", addFromSearch);
+      li.appendChild(btn); list.appendChild(li);
+    }
 
     // frequently-bought quick-add (hidden while searching)
     if (!filter) {
@@ -1256,12 +1280,6 @@
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // populate category dropdown
-  CATEGORIES.forEach(c => {
-    const o = document.createElement("option"); o.value = c; o.textContent = c;
-    if (c === "Other") o.selected = true;
-    $("shopCat").appendChild(o);
-  });
 
   // ---------- forms ----------
   $("todoForm").addEventListener("submit", e => {
@@ -1272,16 +1290,7 @@
     state.todos.push({ id: uid(), text, due, done: false, repeat });
     save(); renderTodos(); e.target.reset(); $("todoRepeat").value = "none"; $("todoText").focus();
   });
-  $("shopForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const name = $("shopText").value.trim(); if (!name) return;
-    const category = $("shopCat").value || "Other";
-    const qty = $("shopQty").value.trim();
-    const match = state.catalog.find(c => c.name.trim().toLowerCase() === resolveName(name).toLowerCase());
-    if (match) { match.needed = true; if (qty) match.qty = match.qty ? mergeQty(match.qty, qty) : qty; }
-    else state.catalog.push({ id: uid(), name, category, needed: true, brand: "", qty, defaultQty: "", bought: false, timesBought: 0 });
-    save(); renderShop(); e.target.reset(); $("shopCat").value = "Other"; $("shopText").focus();
-  });
+  $("shopForm").addEventListener("submit", e => { e.preventDefault(); addFromSearch(); });
   $("clearDoneTodo").addEventListener("click", () => {
     state.todos = state.todos.filter(t => !t.done); save(); renderTodos();
   });
@@ -1323,7 +1332,7 @@
     $("brandSub").textContent = VIEWS[h];
     window.scrollTo({ top: 0 });
     if (h === "todo") $("todoText").focus();
-    if (h === "shop") $("shopText").focus();
+    if (h === "shop") $("shopSearch").focus();
   }
   window.addEventListener("hashchange", route);
 

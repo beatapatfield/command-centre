@@ -343,6 +343,13 @@
   .empty svg { width: 40px; height: 40px; opacity: .4; margin-bottom: 8px; }
   .empty p { margin: 0; font-size: 14px; }
 
+  .todo-hint {
+    font-size: 12.5px; color: var(--muted); font-weight: 500;
+    margin: 2px 2px 0; padding: 6px 10px;
+    background: var(--grad-soft); border-radius: 10px;
+  }
+  .todo-hint b { color: var(--turq-1); font-weight: 700; }
+
   .list-sec { margin: 14px 0 2px; }
   .list-sec:first-child { margin-top: 6px; }
   .sec-title {
@@ -417,6 +424,12 @@
     padding: 1px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
   }
   li.cat-item.needed .qty-tag { background: rgba(13,154,174,0.16); }
+  .qty-tag + .price-tag { margin-left: 0; }
+  .price-tag {
+    font-size: 12px; font-weight: 700; color: #8a6d00;
+    background: rgba(250,204,21,0.22); border: 1px solid rgba(250,204,21,0.55);
+    padding: 1px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  }
   li.cat-item.bought { opacity: .5; }
   li.cat-item.bought .nm { text-decoration: line-through; }
   .step {
@@ -480,6 +493,18 @@
   }
   .detail .brand-input:focus { border-color: var(--turq-2); box-shadow: 0 0 0 3px rgba(47,208,216,0.18); }
   .detail .cat-tag { font-size: 12px; color: var(--muted); }
+  .detail .aisle-select { cursor: pointer; flex: 1 1 160px; }
+  .prices { flex-basis: 100%; }
+  .prices > label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 7px; }
+  .price-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .price-cell {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card-solid); border: 1px solid var(--line); border-radius: 10px; padding: 5px 11px;
+  }
+  .price-cell:focus-within { border-color: var(--turq-2); box-shadow: 0 0 0 3px rgba(47,208,216,0.16); }
+  .price-cell .shop { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+  .price-cell input { width: 58px; border: none; outline: none; background: transparent; font-family: inherit; font-size: 14px; text-align: right; color: var(--ink); }
+  .price-cell .cur { font-size: 12px; color: var(--muted); }
   .remove-perm {
     border: 1px solid rgba(220,38,38,0.3); background: rgba(220,38,38,0.06);
     color: var(--danger); font-family: inherit; font-size: 13px; font-weight: 600;
@@ -579,7 +604,7 @@
     <form class="add" id="todoForm">
       <label class="field">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
-        <input type="text" id="todoText" placeholder="Add a task…" autocomplete="off" required>
+        <input type="text" id="todoText" placeholder="Add a task — e.g. bins out Thursday 7pm" autocomplete="off" required>
       </label>
       <label class="field due" title="Optional due date & time">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
@@ -596,6 +621,7 @@
       </label>
       <button type="submit" class="btn primary">Add</button>
     </form>
+    <div class="todo-hint" id="todoHint" hidden></div>
     <ul id="todoList"></ul>
     <button class="clear-done" id="clearDoneTodo" hidden>Clear completed</button>
   </section>
@@ -640,6 +666,7 @@
   const $ = id => document.getElementById(id);
 
   const CATEGORIES = ["Fruit & Veg", "Bakery", "Meat & Fish", "Dairy & Cheese", "Pantry", "Drinks", "Other"];
+  const SHOPS = ["Lidl", "Biedronka", "Auchan", "Carrefour", "Justynka"];
 
   const SEED_VERSION = 3;
   const SEED = [
@@ -786,6 +813,83 @@
     const key = String(name || "").trim().toLowerCase();
     return ALIASES[key] || name;
   }
+  // Guess a shop aisle from the item name (English + common Polish terms). Specific
+  // multi-word terms are listed first so "olive oil" beats "oil", "sweet potato" beats "potato", etc.
+  const CATEGORY_KEYWORDS = [
+    ["coconut milk", "Pantry"], ["almond milk", "Pantry"], ["oat milk", "Pantry"], ["soy milk", "Pantry"],
+    ["peanut butter", "Pantry"], ["olive oil", "Pantry"], ["tomato paste", "Pantry"], ["tomato sauce", "Pantry"],
+    ["black pepper", "Pantry"], ["ice cream", "Dairy & Cheese"], ["sweet potato", "Fruit & Veg"],
+    ["bell pepper", "Fruit & Veg"], ["spring onion", "Fruit & Veg"], ["green onion", "Fruit & Veg"], ["puff pastry", "Bakery"],
+    ["juice", "Drinks"], ["sok", "Drinks"], ["smoothie", "Drinks"],
+    // fruit & veg
+    ["tomato", "Fruit & Veg"], ["pomidor", "Fruit & Veg"], ["cucumber", "Fruit & Veg"], ["ogór", "Fruit & Veg"],
+    ["pepper", "Fruit & Veg"], ["papryk", "Fruit & Veg"], ["lemon", "Fruit & Veg"], ["lime", "Fruit & Veg"], ["cytryn", "Fruit & Veg"],
+    ["potato", "Fruit & Veg"], ["ziemniak", "Fruit & Veg"], ["onion", "Fruit & Veg"], ["cebul", "Fruit & Veg"],
+    ["cabbage", "Fruit & Veg"], ["kapust", "Fruit & Veg"], ["carrot", "Fruit & Veg"], ["marchew", "Fruit & Veg"],
+    ["garlic", "Fruit & Veg"], ["czosnek", "Fruit & Veg"], ["apple", "Fruit & Veg"], ["jabł", "Fruit & Veg"],
+    ["banana", "Fruit & Veg"], ["banan", "Fruit & Veg"], ["orange", "Fruit & Veg"], ["pomarańcz", "Fruit & Veg"],
+    ["berry", "Fruit & Veg"], ["berries", "Fruit & Veg"], ["blueberr", "Fruit & Veg"], ["jagod", "Fruit & Veg"],
+    ["raspberr", "Fruit & Veg"], ["malin", "Fruit & Veg"], ["strawberr", "Fruit & Veg"], ["truskaw", "Fruit & Veg"],
+    ["grape", "Fruit & Veg"], ["melon", "Fruit & Veg"], ["arbuz", "Fruit & Veg"], ["avocado", "Fruit & Veg"], ["awokado", "Fruit & Veg"],
+    ["broccoli", "Fruit & Veg"], ["brokuł", "Fruit & Veg"], ["spinach", "Fruit & Veg"], ["szpinak", "Fruit & Veg"],
+    ["lettuce", "Fruit & Veg"], ["salad", "Fruit & Veg"], ["sałat", "Fruit & Veg"], ["greens", "Fruit & Veg"], ["rocket", "Fruit & Veg"], ["roszpon", "Fruit & Veg"],
+    ["mushroom", "Fruit & Veg"], ["pieczar", "Fruit & Veg"], ["courgette", "Fruit & Veg"], ["zucchini", "Fruit & Veg"], ["cukini", "Fruit & Veg"],
+    ["ginger", "Fruit & Veg"], ["imbir", "Fruit & Veg"], ["chilli", "Fruit & Veg"], ["chili", "Fruit & Veg"],
+    ["basil", "Fruit & Veg"], ["bazyli", "Fruit & Veg"], ["parsley", "Fruit & Veg"], ["pietrusz", "Fruit & Veg"], ["leek", "Fruit & Veg"], ["celery", "Fruit & Veg"], ["seler", "Fruit & Veg"],
+    // bakery
+    ["bread", "Bakery"], ["chleb", "Bakery"], ["bagel", "Bakery"], ["baguette", "Bakery"], ["bagiet", "Bakery"],
+    ["tortilla", "Bakery"], ["wrap", "Bakery"], ["pita", "Bakery"], ["croissant", "Bakery"], ["rogal", "Bakery"],
+    ["pastry", "Bakery"], ["bun", "Bakery"], ["roll", "Bakery"], ["bułk", "Bakery"], ["muffin", "Bakery"], ["cake", "Bakery"], ["ciast", "Bakery"], ["pieczywo", "Bakery"],
+    // meat & fish
+    ["chicken", "Meat & Fish"], ["kurczak", "Meat & Fish"], ["beef", "Meat & Fish"], ["wołow", "Meat & Fish"],
+    ["pork", "Meat & Fish"], ["wieprz", "Meat & Fish"], ["mince", "Meat & Fish"], ["mielon", "Meat & Fish"],
+    ["turkey", "Meat & Fish"], ["indyk", "Meat & Fish"], ["lamb", "Meat & Fish"], ["bacon", "Meat & Fish"], ["boczek", "Meat & Fish"],
+    ["ham", "Meat & Fish"], ["szynk", "Meat & Fish"], ["sausage", "Meat & Fish"], ["kiełbas", "Meat & Fish"],
+    ["salmon", "Meat & Fish"], ["łoso", "Meat & Fish"], ["tuna", "Meat & Fish"], ["tuńczyk", "Meat & Fish"],
+    ["fish", "Meat & Fish"], ["ryba", "Meat & Fish"], ["shrimp", "Meat & Fish"], ["prawn", "Meat & Fish"], ["krewet", "Meat & Fish"], ["cod", "Meat & Fish"], ["dorsz", "Meat & Fish"], ["meat", "Meat & Fish"], ["mięs", "Meat & Fish"],
+    // dairy & cheese
+    ["milk", "Dairy & Cheese"], ["mleko", "Dairy & Cheese"], ["cheese", "Dairy & Cheese"], ["serek", "Dairy & Cheese"],
+    ["cheddar", "Dairy & Cheese"], ["mozar", "Dairy & Cheese"], ["mozzar", "Dairy & Cheese"], ["parmez", "Dairy & Cheese"], ["parmes", "Dairy & Cheese"],
+    ["feta", "Dairy & Cheese"], ["halloumi", "Dairy & Cheese"], ["butter", "Dairy & Cheese"], ["masło", "Dairy & Cheese"], ["maslo", "Dairy & Cheese"],
+    ["yog", "Dairy & Cheese"], ["jogurt", "Dairy & Cheese"], ["cream", "Dairy & Cheese"], ["śmietan", "Dairy & Cheese"], ["smietan", "Dairy & Cheese"],
+    ["mascarpone", "Dairy & Cheese"], ["cottage", "Dairy & Cheese"], ["twaró", "Dairy & Cheese"], ["twarog", "Dairy & Cheese"],
+    ["skyr", "Dairy & Cheese"], ["egg", "Dairy & Cheese"], ["jaj", "Dairy & Cheese"], ["kefir", "Dairy & Cheese"], ["curd", "Dairy & Cheese"], ["piórko", "Dairy & Cheese"],
+    // drinks
+    ["water", "Drinks"], ["woda", "Drinks"], ["juice", "Drinks"], ["sok", "Drinks"], ["cola", "Drinks"], ["coke", "Drinks"],
+    ["pepsi", "Drinks"], ["soda", "Drinks"], ["lemonade", "Drinks"], ["lemoniad", "Drinks"], ["beer", "Drinks"], ["piwo", "Drinks"],
+    ["wine", "Drinks"], ["wino", "Drinks"], ["tonic", "Drinks"], ["napój", "Drinks"], ["napoj", "Drinks"], ["sparkling", "Drinks"], ["kombucha", "Drinks"],
+    // pantry
+    ["rice", "Pantry"], ["ryż", "Pantry"], ["pasta", "Pantry"], ["makaron", "Pantry"], ["noodle", "Pantry"],
+    ["flour", "Pantry"], ["mąk", "Pantry"], ["sugar", "Pantry"], ["cukier", "Pantry"], ["oil", "Pantry"], ["olej", "Pantry"], ["oliw", "Pantry"],
+    ["salt", "Pantry"], ["sól", "Pantry"], ["vinegar", "Pantry"], ["ocet", "Pantry"], ["passata", "Pantry"], ["ketchup", "Pantry"],
+    ["mayo", "Pantry"], ["majonez", "Pantry"], ["mustard", "Pantry"], ["musztard", "Pantry"], ["bean", "Pantry"], ["fasol", "Pantry"],
+    ["lentil", "Pantry"], ["soczewic", "Pantry"], ["chickpea", "Pantry"], ["ciecierzyc", "Pantry"], ["cereal", "Pantry"], ["oats", "Pantry"], ["płatki", "Pantry"],
+    ["honey", "Pantry"], ["miód", "Pantry"], ["jam", "Pantry"], ["dżem", "Pantry"], ["nutella", "Pantry"], ["coffee", "Pantry"], ["kawa", "Pantry"],
+    ["tea", "Pantry"], ["herbat", "Pantry"], ["spice", "Pantry"], ["przypraw", "Pantry"], ["stock", "Pantry"], ["broth", "Pantry"], ["bulion", "Pantry"],
+    ["corn", "Pantry"], ["kukurydz", "Pantry"], ["chocolate", "Pantry"], ["czekolad", "Pantry"], ["biscuit", "Pantry"], ["nuts", "Pantry"], ["orzech", "Pantry"], ["crisps", "Pantry"], ["chips", "Pantry"], ["can", "Pantry"], ["puszk", "Pantry"]
+  ];
+  function guessCategory(name) {
+    const n = String(name || "").toLowerCase();
+    for (const [kw, cat] of CATEGORY_KEYWORDS) if (n.includes(kw)) return cat;
+    return "Other";
+  }
+  // ----- prices (Polish złoty) -----
+  function parsePrice(s) {
+    s = String(s).replace(/zł/gi, "").replace(",", ".").replace(/[^\d.]/g, "").trim();
+    if (s === "") return null;
+    const n = parseFloat(s);
+    return isNaN(n) ? null : Math.round(n * 100) / 100;
+  }
+  const fmtZl = n => n.toFixed(2).replace(".", ",") + " zł";
+  function cheapest(item) {
+    let best = null;
+    if (item.prices) SHOPS.forEach(sh => {
+      const v = item.prices[sh];
+      if (typeof v === "number" && v > 0 && (best === null || v < best.val)) best = { shop: sh, val: v };
+    });
+    return best;
+  }
+
   // Adjust the first numeric term of a quantity by delta (drops it at 0, seeds "1" from empty).
   function stepQty(str, delta) {
     const terms = parseQty(str);
@@ -810,7 +914,7 @@
         match.needed = true;
         if (qty) match.qty = match.qty ? mergeQty(match.qty, qty) : qty;
       } else {
-        state.catalog.push({ id: uid(), name, category: "Other", needed: true, brand: "", qty, defaultQty: "", bought: false, timesBought: 0 });
+        state.catalog.push({ id: uid(), name, category: guessCategory(name), needed: true, brand: "", qty, defaultQty: "", bought: false, timesBought: 0, prices: {} });
       }
       n++;
     });
@@ -904,6 +1008,7 @@
       if (typeof c.defaultQty !== "string") c.defaultQty = "";
       if (typeof c.bought !== "boolean") c.bought = false;
       if (typeof c.timesBought !== "number") c.timesBought = 0;
+      if (typeof c.prices !== "object" || !c.prices) c.prices = {};
     });
     (s.todos || []).forEach(t => { if (t.repeat == null) t.repeat = "none"; });
     return s;
@@ -931,6 +1036,82 @@
     return "due";
   }
   const REPEATS = { none: "One-off", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+
+  // ----- natural-language date parsing for the task box -----
+  const WD = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+  const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  function nextWeekday(target, from, forceNext) {
+    const d = midnight(from); let diff = (target - d.getDay() + 7) % 7;
+    if (diff === 0 && forceNext) diff = 7;
+    return addDays(d, diff);
+  }
+  const to24 = (h, ap) => { ap = (ap || "").toLowerCase(); if (ap === "pm" && h < 12) h += 12; if (ap === "am" && h === 12) h = 0; return h; };
+  function monthDate(day, monName) {
+    const now = new Date(), mo = MON[monName.toLowerCase().slice(0, 3)];
+    let c = new Date(now.getFullYear(), mo, day);
+    if (c < midnight(now)) c = new Date(now.getFullYear() + 1, mo, day);
+    return c;
+  }
+  function parseNatural(input) {
+    let text = " " + input + " ";
+    const now = new Date();
+    let due = null, repeat = null, date = null, hour = null, min = 0, m;
+    const strip = re => { const mm = text.match(re); if (mm) text = text.slice(0, mm.index) + " " + text.slice(mm.index + mm[0].length); return mm; };
+
+    // repeat (order matters: "every month" must beat the weekday rule that starts with "mon")
+    if (strip(/\b(every\s*day|daily)\b/i)) repeat = "daily";
+    else if (strip(/\b(every\s*month|monthly)\b/i)) repeat = "monthly";
+    else if (m = strip(/\bevery\s+(mon|tue|wed|thu|fri|sat|sun)[a-z]*\b/i)) { repeat = "weekly"; date = nextWeekday(WD[m[1].toLowerCase().slice(0, 3)], now, true); }
+    else if (strip(/\b(every\s*week|weekly)\b/i)) repeat = "weekly";
+
+    // absolute "in N hours/minutes"
+    if (m = strip(/\bin\s+(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i)) {
+      const n = +m[1], dt = new Date(now);
+      if (/^h/i.test(m[2])) dt.setHours(dt.getHours() + n); else dt.setMinutes(dt.getMinutes() + n);
+      due = dt.toISOString();
+    }
+
+    // day
+    if (!date && due === null) {
+      if (strip(/\btomorrow\b|\btmr\b/i)) date = addDays(midnight(now), 1);
+      else if (strip(/\btonight\b/i)) { date = midnight(now); if (hour === null) hour = 20; }
+      else if (strip(/\btoday\b/i)) date = midnight(now);
+      else if (m = strip(/\bin\s+(\d+)\s*(days?|weeks?)\b/i)) date = addDays(midnight(now), /^d/i.test(m[2]) ? +m[1] : +m[1] * 7);
+      else if (m = strip(/\b(next\s+)?(mon|tue|wed|thu|fri|sat|sun)[a-z]*\b/i)) date = nextWeekday(WD[m[2].toLowerCase().slice(0, 3)], now, !!m[1]);
+      else if (m = strip(/\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/)) {
+        const d = +m[1], mo = +m[2] - 1; let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : now.getFullYear();
+        let c = new Date(y, mo, d); if (!m[3] && c < midnight(now)) c = new Date(y + 1, mo, d); date = c;
+      }
+      else if (m = strip(/\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i)) date = monthDate(+m[1], m[2]);
+      else if (m = strip(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})\b/i)) date = monthDate(+m[2], m[1]);
+    }
+
+    // time
+    if (due === null) {
+      if (strip(/\bnoon\b/i)) { hour = 12; min = 0; }
+      else if (strip(/\bmidnight\b/i)) { hour = 0; min = 0; }
+      else if (m = strip(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/i)) { hour = +m[1]; min = +m[2]; if (m[3]) hour = to24(hour, m[3]); }
+      else if (m = strip(/\b(?:at\s*)?(\d{1,2})\s*(am|pm)\b/i)) hour = to24(+m[1], m[2]);
+      else if (m = strip(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i)) { hour = +m[1]; min = m[2] ? +m[2] : 0; }
+      else if (hour === null && strip(/\bmorning\b/i)) hour = 9;
+      else if (hour === null && strip(/\bafternoon\b/i)) hour = 14;
+      else if (hour === null && strip(/\bevening\b/i)) hour = 18;
+    }
+
+    // assemble
+    if (due === null && (date || hour !== null)) {
+      const base = date ? new Date(date) : midnight(now);
+      base.setHours(hour !== null ? hour : 9, min || 0, 0, 0);
+      if (!date && base < now) base.setDate(base.getDate() + 1);
+      due = base.toISOString();
+    }
+
+    let clean = text.replace(/\s+/g, " ").trim();
+    clean = clean.replace(/\b(on|at|by|this|the)\s*$/i, "").replace(/^(on|at|by)\b\s*/i, "").trim();
+    return { cleanText: clean || input.trim(), due, repeat };
+  }
   // Advance a due date by the repeat interval until it lands in the future.
   function advance(iso, repeat) {
     const d = iso ? new Date(iso) : new Date();
@@ -1085,8 +1266,11 @@
 
     const name = document.createElement("div");
     name.className = "name";
+    const cheap0 = cheapest(item);
     name.innerHTML = "<span class=\"nm\">" + escapeHtml(item.name) + "</span>" +
-      (item.qty ? "<span class=\"qty-tag\">" + escapeHtml(item.qty) + "</span>" : "") + ICON.chev;
+      (item.qty ? "<span class=\"qty-tag\">" + escapeHtml(item.qty) + "</span>" : "") +
+      (cheap0 ? "<span class=\"price-tag\">" + fmtZl(cheap0.val) + " · " + escapeHtml(cheap0.shop) + "</span>" : "") +
+      ICON.chev;
     // chevron always opens details; tapping the name marks a needed item bought, else opens details
     name.querySelector(".chev").addEventListener("click", e => { e.stopPropagation(); li.classList.toggle("open"); });
     name.addEventListener("click", () => {
@@ -1137,9 +1321,53 @@
       });
     });
     row.append(lab, inp, rm);
-    const tag = document.createElement("div"); tag.className = "cat-tag";
-    tag.textContent = "Category: " + item.category;
-    detail.append(qrow, row, tag);
+
+    const arow = document.createElement("div"); arow.className = "row";
+    const alab = document.createElement("label"); alab.textContent = "Aisle";
+    const asel = document.createElement("select"); asel.className = "brand-input aisle-select";
+    CATEGORIES.forEach(c => {
+      const o = document.createElement("option"); o.value = c; o.textContent = c;
+      if (c === item.category) o.selected = true;
+      asel.appendChild(o);
+    });
+    asel.addEventListener("click", e => e.stopPropagation());
+    asel.addEventListener("change", () => { item.category = asel.value; save(); renderShop(); });
+    arow.append(alab, asel);
+
+    // per-shop prices
+    const prow = document.createElement("div"); prow.className = "prices";
+    const plab = document.createElement("label"); plab.textContent = "Price by shop";
+    prow.appendChild(plab);
+    const grid = document.createElement("div"); grid.className = "price-grid";
+    SHOPS.forEach(sh => {
+      const cell = document.createElement("div"); cell.className = "price-cell";
+      const sn = document.createElement("span"); sn.className = "shop"; sn.textContent = sh;
+      const pin = document.createElement("input");
+      pin.type = "text"; pin.inputMode = "decimal"; pin.placeholder = "—";
+      const v = item.prices ? item.prices[sh] : null;
+      pin.value = (typeof v === "number") ? String(v).replace(".", ",") : "";
+      const cur = document.createElement("span"); cur.className = "cur"; cur.textContent = "zł";
+      pin.addEventListener("click", e => e.stopPropagation());
+      pin.addEventListener("input", () => {
+        const val = parsePrice(pin.value);
+        item.prices = item.prices || {};
+        if (val === null) delete item.prices[sh]; else item.prices[sh] = val;
+        save(); syncPriceTag();
+      });
+      cell.append(sn, pin, cur); grid.appendChild(cell);
+    });
+    prow.appendChild(grid);
+
+    detail.append(qrow, row, arow, prow);
+
+    function syncPriceTag() {
+      const cheap = cheapest(item);
+      let pill = name.querySelector(".price-tag");
+      if (cheap) {
+        if (!pill) { pill = document.createElement("span"); pill.className = "price-tag"; name.insertBefore(pill, name.querySelector(".chev")); }
+        pill.textContent = fmtZl(cheap.val) + " · " + cheap.shop;
+      } else if (pill) { pill.remove(); }
+    }
 
     // keep the collapsed qty pill in sync while editing, without a full re-render
     function syncQtyTag() {
@@ -1284,11 +1512,26 @@
   // ---------- forms ----------
   $("todoForm").addEventListener("submit", e => {
     e.preventDefault();
-    const text = $("todoText").value.trim(); if (!text) return;
-    const due = $("todoDue").value || null;
-    const repeat = $("todoRepeat").value || "none";
+    const raw = $("todoText").value.trim(); if (!raw) return;
+    const p = parseNatural(raw);
+    const text = p.cleanText || raw;
+    const due = $("todoDue").value || p.due || null; // explicit picker wins over parsed
+    const repeat = ($("todoRepeat").value && $("todoRepeat").value !== "none") ? $("todoRepeat").value : (p.repeat || "none");
     state.todos.push({ id: uid(), text, due, done: false, repeat });
-    save(); renderTodos(); e.target.reset(); $("todoRepeat").value = "none"; $("todoText").focus();
+    save(); renderTodos();
+    e.target.reset(); $("todoRepeat").value = "none"; $("todoHint").hidden = true; $("todoText").focus();
+  });
+  $("todoText").addEventListener("input", () => {
+    const raw = $("todoText").value.trim();
+    const hint = $("todoHint");
+    if (!raw) { hint.hidden = true; return; }
+    const p = parseNatural(raw);
+    if (!p.due && !p.repeat) { hint.hidden = true; return; }
+    const parts = [];
+    if (p.due) parts.push(fmtDue(p.due));
+    if (p.repeat) parts.push("repeats " + p.repeat);
+    hint.innerHTML = "↳ <b>" + escapeHtml(p.cleanText) + "</b> · " + parts.join(" · ");
+    hint.hidden = false;
   });
   $("shopForm").addEventListener("submit", e => { e.preventDefault(); addFromSearch(); });
   $("clearDoneTodo").addEventListener("click", () => {

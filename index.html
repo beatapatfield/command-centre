@@ -387,6 +387,8 @@
   .section-head.ready .sh-n { background: rgba(13,154,174,0.14); color: var(--turq-1); }
   .section-head.rest { color: var(--muted); padding: 4px 12px; }
   .section-head.rest .sh-n { background: rgba(90,129,137,0.12); color: var(--muted); }
+  .section-head.soon { background: rgba(220,38,38,0.09); color: var(--danger); }
+  .section-head.soon .sh-n { background: rgba(220,38,38,0.14); color: var(--danger); }
   .cat-group { margin-top: 14px; }
   .cat-title {
     display: flex; align-items: center; gap: 8px;
@@ -470,7 +472,29 @@
   .chip::before { content: "+ "; color: var(--turq-1); font-weight: 800; }
   .chip:hover { border-color: var(--turq-2); background: var(--grad-soft); }
 
-  .shop-actions { display: flex; gap: 16px; margin-top: 10px; }
+  .shop-actions { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* fridge */
+  .field.ftype { flex: 0 1 150px; }
+  .fr-pill {
+    font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 999px;
+    white-space: nowrap; flex-shrink: 0;
+    background: rgba(13,154,174,0.10); color: var(--turq-1);
+  }
+  .fr-pill.soon { background: rgba(250,204,21,0.22); color: #8a6d00; }
+  .fr-pill.expired { background: rgba(220,38,38,0.12); color: var(--danger); }
+  li.fridge-item.expired { border-color: rgba(220,38,38,0.4); }
+  li.fridge-item.soon { border-color: rgba(250,204,21,0.55); }
+  .portion-val { min-width: 26px; text-align: center; font-weight: 700; font-size: 15px; }
+  .expiry-input { flex: 1 1 150px; }
+  .expiry-input.auto { color: #8a6d00; border-color: rgba(250,204,21,0.55); background: rgba(250,204,21,0.10); font-style: italic; }
+  .expiry-input.custom { color: var(--ink); border-color: var(--turq-2); }
+  .auto-btn { width: auto; padding: 0 10px; font-size: 12px; font-weight: 700; }
+  .attention-badge {
+    display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 999px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800;
+    vertical-align: middle; margin-left: 4px;
+  }
   .cat-item .name .chev {
     width: 15px; height: 15px; color: var(--muted); flex-shrink: 0;
     margin-left: auto;
@@ -587,6 +611,16 @@
       </div>
       <span class="tile-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
     </a>
+    <a class="tile" href="#fridge">
+      <span class="tile-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#05343a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><path d="M5 10h14"></path><path d="M9 5v2"></path><path d="M9 13v3"></path></svg>
+      </span>
+      <div class="tile-text">
+        <h3>Fridge <span class="attention-badge" id="homeFridgeBadge" hidden></span></h3>
+        <p class="tile-sub" id="homeFridgeSub">Empty</p>
+      </div>
+      <span class="tile-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
+    </a>
   </section>
 
   <!-- ToDo / Schedule -->
@@ -648,8 +682,38 @@
     <ul id="shopList"></ul>
     <div class="shop-actions">
       <button class="clear-done" id="shareShop" hidden>Share list</button>
+      <button class="clear-done" id="finishShop" hidden>Finish shopping →</button>
       <button class="clear-done" id="clearShop" hidden>Clear list</button>
     </div>
+  </section>
+  </div>
+
+  <!-- Fridge -->
+  <div class="view feature" id="view-fridge">
+  <section class="panel" id="fridgePanel">
+    <div class="panel-head">
+      <span class="panel-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><path d="M5 10h14"></path><path d="M9 5v2"></path><path d="M9 13v3"></path></svg>
+      </span>
+      <h2>Fridge</h2>
+      <span class="count" id="fridgeCount">0</span>
+    </div>
+    <div class="progress-label" id="fridgeMeta">Empty</div>
+    <form class="add" id="fridgeForm">
+      <label class="field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+        <input type="text" id="fridgeText" placeholder="Add to fridge…" autocomplete="off" required>
+      </label>
+      <label class="field ftype" title="Type">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+        <select id="fridgeType">
+          <option value="product">Product</option>
+          <option value="leftover">Leftover</option>
+        </select>
+      </label>
+      <button type="submit" class="btn primary">Add</button>
+    </form>
+    <ul id="fridgeList"></ul>
   </section>
   </div>
 </main>
@@ -741,11 +805,14 @@
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>',
     cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2 3h3l2.6 13.4a2 2 0 0 0 2 1.6h8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>',
     list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>',
-    empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>'
+    empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>',
+    fridge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><path d="M5 10h14"></path><path d="M9 5v2"></path><path d="M9 13v3"></path></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"></path></svg>'
   };
 
   let state = load();
   migrateSeeds(state);
+  if (!Array.isArray(state.fridge)) state.fridge = [];
   const ingested = ingestFromURL();
   save(); // persist current schema / migration
 
@@ -881,6 +948,53 @@
     return isNaN(n) ? null : Math.round(n * 100) / 100;
   }
   const fmtZl = n => n.toFixed(2).replace(".", ",") + " zł";
+
+  // ----- fridge / freshness -----
+  const DAY_MS = 86400000;
+  const SHELF_LIFE = { "Fruit & Veg": 5, "Bakery": 4, "Meat & Fish": 3, "Dairy & Cheese": 7, "Pantry": null, "Drinks": null, "Other": null };
+  const dayFloor = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const dayDiff = (from, to) => Math.round((dayFloor(to) - dayFloor(from)) / DAY_MS);
+  function autoExpiryISO(category, from) {
+    const days = SHELF_LIFE[category];
+    if (days == null) return null;
+    const d = dayFloor(from || new Date()); d.setDate(d.getDate() + days);
+    return d.toISOString();
+  }
+  function fridgeStatus(f) {
+    if (f.type === "leftover") {
+      const age = dayDiff(f.added, new Date());
+      if (age > 6) return "expired";
+      if (age >= 4) return "soon";
+      return "fresh";
+    }
+    if (!f.expiry) return "fresh";
+    const left = dayDiff(new Date(), f.expiry);
+    if (left < 0) return "expired";
+    if (left <= 3) return "soon";
+    return "fresh";
+  }
+  function fridgeStatusText(f) {
+    if (f.type === "leftover") {
+      const age = dayDiff(f.added, new Date());
+      const when = age <= 0 ? "today" : age === 1 ? "yesterday" : age + "d ago";
+      return "Cooked " + when + (f.portions ? " · " + f.portions + " portion" + (f.portions === 1 ? "" : "s") : "");
+    }
+    if (!f.expiry) return "No expiry set";
+    const left = dayDiff(new Date(), f.expiry);
+    if (left < 0) return "Expired " + (-left) + "d ago";
+    if (left === 0) return "Use today";
+    if (left === 1) return "1 day left";
+    return left + " days left";
+  }
+  // Inventory snapshot for the recipe app to read (same shared-storage trick, reversed).
+  function exportFridge() {
+    try {
+      const inv = (state.fridge || []).map(f => ({
+        name: f.name, type: f.type, qty: f.qty || "", expiry: f.expiry || null, portions: f.portions || null
+      }));
+      localStorage.setItem("commandCentre.fridge", JSON.stringify(inv));
+    } catch (e) {}
+  }
   function cheapest(item) {
     let best = null;
     if (item.prices) SHOPS.forEach(sh => {
@@ -993,7 +1107,16 @@
   }
 
   function normalize(p) {
-    const s = { todos: p.todos || [], catalog: p.catalog || [], seedVersion: p.seedVersion || 0 };
+    const s = { todos: p.todos || [], catalog: p.catalog || [], seedVersion: p.seedVersion || 0, fridge: Array.isArray(p.fridge) ? p.fridge : [] };
+    s.fridge.forEach(f => {
+      if (!f.id) f.id = uid();
+      if (f.type !== "leftover") f.type = "product";
+      if (!f.added) f.added = new Date().toISOString();
+      if (f.expiry === undefined) f.expiry = null;
+      if (typeof f.autoExpiry !== "boolean") f.autoExpiry = false;
+      if (f.portions === undefined) f.portions = null;
+      if (!f.category) f.category = "Other";
+    });
     if (!s.catalog.length && Array.isArray(p.shopping) && p.shopping.length) {
       s.catalog = seedCopy();
       p.shopping.forEach(x => s.catalog.push({ id: x.id || uid(), name: x.text, category: "Other", needed: !x.done, brand: "" }));
@@ -1015,7 +1138,7 @@
   }
 
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    try { localStorage.setItem(KEY, JSON.stringify(state)); exportFridge(); }
     catch (e) { console.warn("Save failed", e); }
   }
 
@@ -1474,6 +1597,7 @@
     $("shopProgressLabel").textContent = need ? (bought + " of " + need + " in the trolley") : "Nothing selected";
     $("clearShop").hidden = !need;
     $("shareShop").hidden = !need;
+    $("finishShop").hidden = !bought;
     updateHome();
   }
   function shopListText() {
@@ -1506,6 +1630,111 @@
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------- Fridge ----------
+  const toDateInput = iso => { const d = new Date(iso); if (isNaN(d)) return ""; const p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); };
+  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }); };
+
+  function addToFridge(name, type) {
+    const category = guessCategory(name);
+    const now = new Date().toISOString();
+    if (type === "leftover") {
+      state.fridge.push({ id: uid(), name, category, type: "leftover", added: now, expiry: null, autoExpiry: false, portions: 1 });
+    } else {
+      const exp = autoExpiryISO(category, now);
+      state.fridge.push({ id: uid(), name, category, type: "product", added: now, expiry: exp, autoExpiry: !!exp, portions: null });
+    }
+    save(); renderFridge();
+  }
+
+  function makeFridgeItem(f) {
+    const st = fridgeStatus(f);
+    const li = document.createElement("li");
+    li.className = "cat-item fridge-item " + st;
+
+    const info = document.createElement("div"); info.className = "name";
+    info.innerHTML = '<span class="nm">' + escapeHtml(f.name) + "</span>" +
+      '<span class="fr-pill ' + st + '">' + escapeHtml(fridgeStatusText(f)) + "</span>" + ICON.chev;
+    info.querySelector(".chev").addEventListener("click", e => { e.stopPropagation(); li.classList.toggle("open"); });
+    info.addEventListener("click", () => li.classList.toggle("open"));
+
+    const detail = document.createElement("div"); detail.className = "detail";
+
+    if (f.type === "product") {
+      const erow = document.createElement("div"); erow.className = "row";
+      const elab = document.createElement("label"); elab.textContent = "Expiry";
+      const ein = document.createElement("input");
+      ein.type = "date"; ein.className = "brand-input expiry-input " + (f.autoExpiry ? "auto" : "custom");
+      ein.value = f.expiry ? toDateInput(f.expiry) : "";
+      ein.addEventListener("click", e => e.stopPropagation());
+      ein.addEventListener("change", () => {
+        f.expiry = ein.value ? new Date(ein.value + "T00:00:00").toISOString() : null;
+        f.autoExpiry = false; save(); renderFridge();
+      });
+      const autoBtn = document.createElement("button");
+      autoBtn.type = "button"; autoBtn.className = "step auto-btn"; autoBtn.textContent = "auto"; autoBtn.title = "Reset to suggested date";
+      autoBtn.addEventListener("click", e => { e.stopPropagation(); f.expiry = autoExpiryISO(f.category, f.added); f.autoExpiry = true; save(); renderFridge(); });
+      erow.append(elab, ein, autoBtn);
+      detail.appendChild(erow);
+      const src = document.createElement("div"); src.className = "cat-tag";
+      src.textContent = f.expiry ? (f.autoExpiry ? "Auto estimate from " + f.category + " · edit to set your own" : "Set by you") : "No expiry — add one above";
+      detail.appendChild(src);
+    } else {
+      const prow = document.createElement("div"); prow.className = "row";
+      const plab = document.createElement("label"); plab.textContent = "Portions left";
+      const minus = document.createElement("button"); minus.type = "button"; minus.className = "step"; minus.textContent = "−";
+      const val = document.createElement("span"); val.className = "portion-val"; val.textContent = f.portions || 0;
+      const plus = document.createElement("button"); plus.type = "button"; plus.className = "step"; plus.textContent = "+";
+      minus.addEventListener("click", e => { e.stopPropagation(); f.portions = Math.max(0, (f.portions || 0) - 1); save(); renderFridge(); });
+      plus.addEventListener("click", e => { e.stopPropagation(); f.portions = (f.portions || 0) + 1; save(); renderFridge(); });
+      prow.append(plab, minus, val, plus);
+      detail.appendChild(prow);
+      const crow = document.createElement("div"); crow.className = "cat-tag"; crow.textContent = "Cooked " + fmtDate(f.added);
+      detail.appendChild(crow);
+    }
+
+    const rrow = document.createElement("div"); rrow.className = "row";
+    const rm = document.createElement("button"); rm.className = "remove-perm"; rm.type = "button"; rm.innerHTML = ICON.trash + " Remove";
+    rm.addEventListener("click", () => {
+      const idx = state.fridge.findIndex(x => x.id === f.id); if (idx < 0) return;
+      const [removed] = state.fridge.splice(idx, 1); save(); renderFridge();
+      toast('Removed "' + removed.name + '"', { label: "Undo", fn: () => { state.fridge.splice(Math.min(idx, state.fridge.length), 0, removed); save(); renderFridge(); } });
+    });
+    rrow.append(rm); detail.appendChild(rrow);
+
+    li.append(info, detail);
+    return li;
+  }
+
+  function renderFridge() {
+    const list = $("fridgeList"); list.innerHTML = "";
+    if (!state.fridge.length) {
+      const li = document.createElement("li");
+      li.innerHTML = '<div class="empty">' + ICON.fridge + "<p>Fridge is empty. Add items, or finish a shop to stock it.</p></div>";
+      list.appendChild(li); updateFridgeMeta(); return;
+    }
+    const rank = { expired: 0, soon: 1, fresh: 2 };
+    const sortKey = f => (f.type === "product" && f.expiry) ? new Date(f.expiry) : new Date(f.added);
+    const items = [...state.fridge].sort((a, b) => (rank[fridgeStatus(a)] - rank[fridgeStatus(b)]) || (sortKey(a) - sortKey(b)));
+    const attention = items.filter(f => fridgeStatus(f) !== "fresh");
+    const fresh = items.filter(f => fridgeStatus(f) === "fresh");
+    if (attention.length) {
+      list.appendChild(sectionHead("soon", ICON.alert, "Use soon", attention.length));
+      attention.forEach(f => list.appendChild(makeFridgeItem(f)));
+    }
+    if (fresh.length) {
+      if (attention.length) list.appendChild(sectionHead("rest", ICON.fridge, "In the fridge", fresh.length));
+      fresh.forEach(f => list.appendChild(makeFridgeItem(f)));
+    }
+    updateFridgeMeta();
+  }
+  function updateFridgeMeta() {
+    const total = state.fridge.length;
+    const attn = state.fridge.filter(f => fridgeStatus(f) !== "fresh").length;
+    $("fridgeCount").textContent = total;
+    $("fridgeMeta").textContent = total ? (attn ? attn + " to use soon" : "All fresh") : "Empty";
+    updateHome();
   }
 
 
@@ -1543,6 +1772,24 @@
   });
   $("shareShop").addEventListener("click", shareList);
   $("shopSearch").addEventListener("input", e => { shopFilter = e.target.value; renderShop(); });
+  $("finishShop").addEventListener("click", () => {
+    const bought = state.catalog.filter(c => c.needed && c.bought);
+    if (!bought.length) return;
+    const now = new Date().toISOString();
+    bought.forEach(c => {
+      const exp = autoExpiryISO(c.category, now);
+      state.fridge.push({ id: uid(), name: c.name, category: c.category, type: "product", added: now, expiry: exp, autoExpiry: !!exp, portions: null, qty: c.qty || "" });
+      c.needed = false; c.bought = false; c.qty = c.defaultQty || "";
+    });
+    save(); renderShop(); renderFridge();
+    toast(bought.length + " item" + (bought.length === 1 ? "" : "s") + " moved to the fridge");
+  });
+  $("fridgeForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("fridgeText").value.trim(); if (!name) return;
+    addToFridge(name, $("fridgeType").value || "product");
+    e.target.reset(); $("fridgeType").value = "product"; $("fridgeText").focus();
+  });
 
   // ---------- export (backup) ----------
   $("exportBtn").addEventListener("click", () => {
@@ -1555,7 +1802,7 @@
   });
 
   // ---------- home tiles + view routing ----------
-  const VIEWS = { home: "Your day at a glance", todo: "To-do & schedule", shop: "Shopping list" };
+  const VIEWS = { home: "Your day at a glance", todo: "To-do & schedule", shop: "Shopping list", fridge: "Fridge" };
   function updateHome() {
     const open = state.todos.filter(t => !t.done).length;
     const overdue = state.todos.filter(t => t.due && !t.done && new Date(t.due) < new Date()).length;
@@ -1564,6 +1811,11 @@
       : "All clear";
     const need = state.catalog.filter(c => c.needed).length;
     $("homeShopSub").textContent = need ? need + " item" + (need === 1 ? "" : "s") + " to buy" : "Nothing selected";
+    const fTotal = state.fridge.length;
+    const fAttn = state.fridge.filter(f => fridgeStatus(f) !== "fresh").length;
+    $("homeFridgeSub").textContent = fTotal ? (fTotal + " item" + (fTotal === 1 ? "" : "s") + (fAttn ? " · " + fAttn + " to use soon" : "")) : "Empty";
+    const badge = $("homeFridgeBadge");
+    if (fAttn) { badge.textContent = fAttn; badge.hidden = false; } else badge.hidden = true;
   }
   function route() {
     let h = (location.hash || "").replace("#", "");
@@ -1576,6 +1828,7 @@
     window.scrollTo({ top: 0 });
     if (h === "todo") $("todoText").focus();
     if (h === "shop") $("shopSearch").focus();
+    if (h === "fridge") $("fridgeText").focus();
   }
   window.addEventListener("hashchange", route);
 
@@ -1586,6 +1839,7 @@
 
   renderTodos();
   renderShop();
+  renderFridge();
   route();
   ingestInbox();
 
